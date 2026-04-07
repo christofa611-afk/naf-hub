@@ -1,47 +1,54 @@
 name: Build and Deploy NAF Hub
+
 on:
   push:
     branches: [ "main" ]
   workflow_dispatch:
   schedule:
     - cron: '0 0 */2 * *' # Every 48 hours
+
 permissions:
   contents: read
   pages: write
   id-token: write
+
 concurrency:
-  group: "pages-${{ github.ref }}"
+  group: "pages"
   cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup Node.js
+      
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      # FIX IS HERE: Changed 'npm ci' to 'npm install'
+      
+      # FIX: Use 'npm install' instead of 'npm ci' to generate lock file automatically
       - name: Install Dependencies
         run: npm install
+      
       - name: Fetch YouTube Data
         run: node scripts/fetch-youtube.js
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      
       - name: Build App
         run: npm run build
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY }}
+      
       - name: Setup Pages
-        uses: actions/configure-pages@v5
-
+        uses: actions/configure-pages@v4
+      
       - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
+
   deploy:
     environment:
       name: github-pages
